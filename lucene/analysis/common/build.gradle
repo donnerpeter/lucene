@@ -22,6 +22,7 @@ description = 'Analyzers for indexing content in different languages and domains
 dependencies {
   api project(':lucene:core')
   testImplementation project(':lucene:test-framework')
+  testImplementation 'com.gitlab.dumonts:hunspell:1.1.1'
 }
 
 // Fetch the data and enable regression tests against woorm/ libreoffice dictionaries.

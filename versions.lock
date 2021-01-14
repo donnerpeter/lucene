@@ -33,3 +33,5 @@ xerces:xercesImpl:2.12.0 (2 constraints: 1f14b675)
 
 [Test dependencies]
 org.locationtech.jts:jts-core:1.15.0 (1 constraints: 3905383b)
+com.gitlab.dumonts:hunspell:1.1.1 (1 constraints: 0505f435)
+com.nativelibs4java:bridj:0.7.0 (1 constraints: 5c0c81fb)
