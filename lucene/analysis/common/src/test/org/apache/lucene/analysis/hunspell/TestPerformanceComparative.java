@@ -26,7 +26,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import org.apache.lucene.util.LuceneTestCase;
@@ -48,12 +50,12 @@ public class TestPerformanceComparative extends LuceneTestCase {
 
   @Test
   public void en() throws Exception {
-    checkPerformance("en_US", 1_000_000, 40);
+    checkPerformance("en_US", 1_000_000, 60);
   }
 
   @Test
   public void de() throws Exception {
-    checkPerformance("de", 200_000, 25);
+    checkPerformance("de", 200_000, 30);
   }
 
   @Test
@@ -63,32 +65,32 @@ public class TestPerformanceComparative extends LuceneTestCase {
 
   @Test
   public void ca() throws Exception {
-    checkPerformance("ca", 200_000, 0);
+    checkPerformance("ca", 400_000, 20);
   }
 
   @Test
   public void es() throws Exception {
-    checkPerformance("es", 500_000, 0);
+    checkPerformance("es", 700_000, 100);
   }
 
   @Test
   public void nl() throws Exception {
-    checkPerformance("nl", 300_000, 0);
+    checkPerformance("nl", 400_000, 30);
   }
 
   @Test
   public void pt() throws Exception {
-    checkPerformance("pt", 200_000, 0);
+    checkPerformance("pt", 250_000, 20);
   }
 
   @Test
   public void ru() throws Exception {
-    checkPerformance("ru", 1_000_000, 0);
+    checkPerformance("ru", 400_000, 30);
   }
 
   @Test
   public void uk() throws Exception {
-    checkPerformance("uk", 1_000_000, 0);
+    checkPerformance("uk", 250_000, 40);
   }
 
   private void checkPerformance(String dicHint, int wordCount, int checkSuggestions)
@@ -112,7 +114,7 @@ public class TestPerformanceComparative extends LuceneTestCase {
     Hunspell speller = new Hunspell(dictionary, TimeoutPolicy.THROW_EXCEPTION, () -> {});
 
     int expensiveSuggestions = 0;
-    List<String> misspelled = new ArrayList<>();
+    Set<String> misspelled = new LinkedHashSet<>();
     for (String word : words) {
       long start = System.currentTimeMillis();
       boolean ok = nativeCheck.spell(word);
@@ -193,7 +195,7 @@ public class TestPerformanceComparative extends LuceneTestCase {
         String line = reader.readLine();
         if (line == null) break;
 
-        for (String token : line.split("[^a-zA-Z" + Pattern.quote(dictionary.wordChars) + "]+")) {
+        for (String token : line.split("[^\\p{IsLetter}" + Pattern.quote(dictionary.wordChars) + "]+")) {
           String word = stripPunctuation(token);
           if (word != null) {
             words.add(word);
