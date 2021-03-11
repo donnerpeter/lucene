@@ -195,7 +195,8 @@ public class TestPerformanceComparative extends LuceneTestCase {
         String line = reader.readLine();
         if (line == null) break;
 
-        for (String token : line.split("[^\\p{IsLetter}" + Pattern.quote(dictionary.wordChars) + "]+")) {
+        for (String token :
+            line.split("[^\\p{IsLetter}" + Pattern.quote(dictionary.wordChars) + "]+")) {
           String word = stripPunctuation(token);
           if (word != null) {
             words.add(word);

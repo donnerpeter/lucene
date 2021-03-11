@@ -52,14 +52,20 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class CorpusTest {
-  private static final String INCORRECT_BREAK_CASE = "[0-9A-Z]*[-.][0-9A-Z-.]*";
+  private static final String INCORRECT_BREAK_CASE = "[0-9\\p{Lu}]*[-.][0-9\\p{Lu}-.]*";
   private static final Map<String, Pattern> spellExcludes =
       Map.of(
           "fr", Pattern.compile(".*[a-z]+['’][A-Z][a-z]+|3d|" + INCORRECT_BREAK_CASE),
           "de", Pattern.compile(".*-\\p{Upper}.*|" + INCORRECT_BREAK_CASE),
           "pt", Pattern.compile("CM|KG|KM|" + INCORRECT_BREAK_CASE),
+          "uk", Pattern.compile("[\\w-]+-Ñ|\\p{Lu}+-[\\w-]+|" + INCORRECT_BREAK_CASE), // see ICONV
           "nl", Pattern.compile("3d|3d-printen|3m|Powertraining|vrijetijd|.*-\\d\\d-.*"));
-  private static final Map<String, Set<String>> suggestExcludes = Map.of("en", Set.of("Reters"));
+  private static final Map<String, Set<String>> suggestExcludes =
+      Map.of(
+          "en", Set.of("Reters"), // hash order
+          "pt", Set.of("Balc", "Bjos"), // hash order
+          "nl", Set.of("Oeko-Tex", "GS") // dubious dash strategy, smth with case
+          );
 
   @Before
   public void setUp() throws Exception {
@@ -79,7 +85,7 @@ public class CorpusTest {
     assertEquals(
         0,
         compareImplementations(
-            "/home/peter/work/dicts/wooorm/dictionaries/es/index", "es", 50_000));
+            "/home/peter/work/dicts/wooorm/dictionaries/es/index", "es", 50_000, 100));
   }
 
   @Test
@@ -87,7 +93,7 @@ public class CorpusTest {
     assertEquals(
         0,
         compareImplementations(
-            "/home/peter/work/dicts/wooorm/dictionaries/fr/index", "fr", 50_000));
+            "/home/peter/work/dicts/wooorm/dictionaries/fr/index", "fr", 50_000, 100));
   }
 
   @Test
@@ -103,7 +109,7 @@ public class CorpusTest {
     assertEquals(
         0,
         compareImplementations(
-            "/home/peter/work/dicts/wooorm/dictionaries/ru/index", "ru", Integer.MAX_VALUE));
+            "/home/peter/work/dicts/wooorm/dictionaries/ru/index", "ru", Integer.MAX_VALUE, 200));
   }
 
   @Test
@@ -111,13 +117,13 @@ public class CorpusTest {
     assertEquals(
         0,
         compareImplementations(
-            "/home/peter/work/dicts/wooorm/dictionaries/uk/index", "uk", Integer.MAX_VALUE));
+            "/home/peter/work/dicts/wooorm/dictionaries/uk/index", "uk", Integer.MAX_VALUE, 50));
   }
 
   @Test
   public void pt() throws Exception {
     assertEquals(
-        0, compareImplementations("/home/peter/work/dicts/libre/pt_BR/pt_BR", "pt", 150_000));
+        0, compareImplementations("/home/peter/work/dicts/libre/pt_BR/pt_BR", "pt", 150_000, 20));
   }
 
   @Test
@@ -125,7 +131,7 @@ public class CorpusTest {
     assertEquals(
         0,
         compareImplementations(
-            "/home/peter/work/dicts/wooorm/dictionaries/nl/index", "nl", 130_000));
+            "/home/peter/work/dicts/wooorm/dictionaries/nl/index", "nl", 130_000, 100));
     assertEquals(
         0, compareImplementations("/home/peter/work/dicts/libre/nl_NL/nl_NL", "nl", 500_000));
   }
@@ -150,7 +156,8 @@ public class CorpusTest {
         String line = reader.readLine();
         if (line == null) break;
 
-        for (String token : line.split("[^a-zA-Z" + Pattern.quote(dictionary.wordChars) + "]+")) {
+        for (String token :
+            line.split("[^\\p{IsLetter}" + Pattern.quote(dictionary.wordChars) + "]+")) {
           String word = stripPunctuation(token);
           if (word != null) {
             words.add(word);
@@ -325,6 +332,10 @@ public class CorpusTest {
   private static boolean ignoreSuggestionMismatch(
       String word, Set<String> luceneSugs, Dictionary nonBadDic, List<String> missing) {
     WordCase wc = WordCase.caseOf(word);
+    if (wc == WordCase.UPPER && word.length() == 1) {
+      return true; // Hunspell thinks it's INITCAP and converts suggestions to title case
+    }
+
     if (wc == WordCase.UPPER
         && missing.stream()
             .allMatch(
